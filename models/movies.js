@@ -80,5 +80,3 @@ const movieSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('movie', movieSchema);
-
-// country, director, duration, year, description, image, trailerLink, thumbnail, owner, movieId, nameRU, nameEN

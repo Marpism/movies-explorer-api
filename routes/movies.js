@@ -1,5 +1,5 @@
 const movieRouter = require('express').Router();
-const { celebrate, Joi } = require('celebrate');
+const { celebrate, Joi, errors } = require('celebrate');
 const { createMovie, deleteMovie, getMovies } = require('../controllers/movies');
 const { urlValidator, ruValidator, enValidator } = require('../utils/constants');
 
@@ -17,8 +17,8 @@ movieRouter.post(
       image: Joi.string().pattern(urlValidator).required(),
       trailerLink: Joi.string().pattern(urlValidator).required(),
       thumbnail: Joi.string().pattern(urlValidator).required(),
-      owner: Joi.string().required(),
-      movieId: Joi.string().required(),
+      // owner: Joi.string().required(),
+      movieId: Joi.number().required(),
       nameRU: Joi.string().pattern(ruValidator).required(),
       nameEN: Joi.string().pattern(enValidator).required(),
     }),
@@ -27,5 +27,7 @@ movieRouter.post(
 );
 
 movieRouter.delete('/:_Id', deleteMovie);
+
+movieRouter.use(errors());
 
 module.exports = movieRouter;

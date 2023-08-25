@@ -14,10 +14,10 @@ const { PORT = 4000 } = process.env;
 const app = express();
 app.use(express.json());
 
-mongoose.connect('mongodb://localhost:27017/filmdb', {
+mongoose.connect('mongodb://localhost:27017/bitfilmsdb', {
   useNewUrlParser: true,
 }).then(() => {
-  console.log('Соединение с ДБ установлено');
+  // console.log('Соединение с ДБ установлено');
 });
 
 app.use(cors);
@@ -48,5 +48,5 @@ app.use(errorLogger);
 app.use(errors());
 app.use(errorHandler);
 app.listen(PORT, () => {
-  console.log(`App listening on port ${PORT}`);
+  // console.log(`App listening on port ${PORT}`);
 });

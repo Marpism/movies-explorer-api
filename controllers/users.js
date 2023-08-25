@@ -24,7 +24,7 @@ module.exports.getCurrentUser = (req, res, next) => {
 
 module.exports.createUser = (req, res, next) => {
   const { name, email, password } = req.body;
-  console.log(req)
+  // console.log(req);
   bcrypt.hash(password, 10)
     .then((hash) => User.create({
       name, email, password: hash,
@@ -34,7 +34,7 @@ module.exports.createUser = (req, res, next) => {
       email: user.email,
     }))
     .catch((err) => {
-      console.log(err.message)
+      // console.log(err.message);
       if (err.code === 11000) {
         return next(new ConflictError('Пользователь с такой почтой уже зарегистрирован'));
       } if (err.name === 'ValidationError') {
@@ -46,13 +46,19 @@ module.exports.createUser = (req, res, next) => {
 
 module.exports.updateUser = (req, res, next) => {
   const userId = req.user._id;
-  User.findByIdAndUpdate(userId, { name: req.body.name, email: req.body.email }, { new: true, runValidators: true })
+  User.findByIdAndUpdate(
+    userId,
+    { name: req.body.name, email: req.body.email },
+    { new: true, runValidators: true },
+  )
     .orFail(() => {
       throw new NotFoundError('Пользователь не найден');
     })
     .then((user) => res.send({ data: user }))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
+      if (err.code === 11000) {
+        return next(new ConflictError('Недостаточно прав'));
+      } if (err.name === 'ValidationError') {
         return next(new BadReqError('переданы некорректные данные'));
       }
       return next(err);
