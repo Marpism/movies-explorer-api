@@ -1,0 +1,95 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/users');
+const BadReqError = require('../errors/BadReqError');
+const NotFoundError = require('../errors/NotFoundError');
+const UnauthError = require('../errors/UnauthError');
+const ConflictError = require('../errors/ConflictError');
+const {
+  CREATED, BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR,
+} = require('../utils/constants');
+
+const { NODE_ENV, JWT_SECRET } = process.env;
+
+module.exports.getCurrentUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError('Пользователь не найден');
+      }
+      res.send({ data: user });
+    })
+    .catch(next);
+};
+
+module.exports.createUser = (req, res, next) => {
+  const { name, email, password } = req.body;
+  // console.log(req);
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      name, email, password: hash,
+    }))
+    .then((user) => res.status(CREATED).send({
+      name: user.name,
+      email: user.email,
+    }))
+    .catch((err) => {
+      // console.log(err.message);
+      if (err.code === 11000) {
+        return next(new ConflictError('Пользователь с такой почтой уже зарегистрирован'));
+      } if (err.name === 'ValidationError') {
+        return next(new BadReqError('переданы некорректные данные'));
+      }
+      return next(err);
+    });
+};
+
+module.exports.updateUser = (req, res, next) => {
+  const userId = req.user._id;
+  User.findByIdAndUpdate(
+    userId,
+    { name: req.body.name, email: req.body.email },
+    { new: true, runValidators: true },
+  )
+    .orFail(() => {
+      throw new NotFoundError('Пользователь не найден');
+    })
+    .then((user) => res.send({ data: user }))
+    .catch((err) => {
+      if (err.code === 11000) {
+        return next(new ConflictError('Недостаточно прав'));
+      } if (err.name === 'ValidationError') {
+        return next(new BadReqError('переданы некорректные данные'));
+      }
+      return next(err);
+    });
+};
+
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+  User.findOne({ email }).select('+password')
+    .then((user) => {
+      if (!user) {
+        return Promise.reject(new UnauthError('Неправильные почта или пароль'));
+      }
+      return bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            return Promise.reject(new UnauthError('Неправильные почта или пароль'));
+          }
+          return user;
+        });
+    })
+    .then((user) => {
+      const token = jwt.sign({ _id: user._id }, (NODE_ENV === 'production') ? JWT_SECRET : 'some-secret-key', { expiresIn: '7d' });
+
+      // console.log(user);
+      res.send({ token, message: 'Добро пожаловать!' });
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new BadReqError('переданы некорректные данные'));
+      }
+      return next(err);
+    });
+};
